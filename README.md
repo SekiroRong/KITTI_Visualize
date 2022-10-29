@@ -14,7 +14,7 @@ GitHub Link:[A convenient tool to visualize KITTI dataset.](https://github.com/S
 
 ## Result
 
-![output.gif](output.gif)
+![output.gif](asset/output.gif)
 
 ## Requirement
 
