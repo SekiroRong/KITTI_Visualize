@@ -5,10 +5,7 @@
 # @Software : PyCharm
 # @Contact : sekirorong@gmail.com
 # @github : https://github.com/SekiroRong
-import os
-import sys
 import math
-
 import numpy as np
 import kitti_config as cnf
 

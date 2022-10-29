@@ -48,7 +48,6 @@ class KittiDataset(Dataset):
             split_txt_path = os.path.join(self.dataset_dir, 'ImageSets', 'val.txt')
             print('testing')
 
-        # print(split_txt_path)
         self.sample_id_list = [int(x.strip()) for x in open(split_txt_path).readlines()]
 
         if num_samples is not None:
@@ -128,7 +127,6 @@ class KittiDataset(Dataset):
     def get_lidar(self, idx):
         lidar_file = os.path.join(self.lidar_dir, '{:06d}.bin'.format(idx))
         # assert os.path.isfile(lidar_file)
-        # print(lidar_file)
         return np.fromfile(lidar_file, dtype=np.float32).reshape(-1, 4)
 
     def get_pred(self, idx):
@@ -261,8 +259,6 @@ class KittiDataset(Dataset):
     def draw_img_with_label(self, index):
         sample_id = int(self.sample_id_list[index])
         preds = self.get_pred(sample_id)
-        # print(preds)
-        # print(sample_id)
         img_path, img_rgb = self.get_image(sample_id)
         lidarData = self.get_lidar(sample_id)
         lidarData = filter_fov_lidar(lidarData)
@@ -277,20 +273,13 @@ class KittiDataset(Dataset):
         lidarData, labels = get_filtered_lidar(lidarData, cnf.boundary, labels)
         bev_map = makeBEVMap(lidarData, cnf.boundary)
         lidarData[:, 2] = lidarData[:, 2] -2.73
-        # print(lidarData)
         fv_points = transformation.lidar_to_camera_point(lidarData[:, :3], calib.V2C, calib.R0)
-        # print(fv_points)
         fv_points_2d = project_to_image(fv_points, calib.P2)
-        # print(fv_points_2d)
         fv_map = makeFVMap(fv_points_2d, img_rgb.shape)
-        # print(labels)
 
         return bev_map, labels, img_rgb, img_path, fv_map, preds
 
 def project_to_image(pts_3d, P):
-    # pts_3d: n x 3
-    # P: 3 x 4
-    # return: n x 2
     pts_3d_homo = np.concatenate([pts_3d, np.ones((pts_3d.shape[0], 1), dtype=np.float32)], axis=1)
     pts_2d = np.dot(P, pts_3d_homo.transpose(1, 0)).transpose(1, 0)
     pts_2d = pts_2d[:, :2] / pts_2d[:, 2:]
@@ -317,6 +306,7 @@ if __name__ == '__main__':
     from easydict import EasyDict as edict
     from transform_utils import OneOf, Random_Scaling, Random_Rotation, lidar_to_camera_box
     from data_process.visualize_utils import merge_rgb_to_bev, show_rgb_image_with_boxes, draw_box_3d
+    from usr_config import mode
 
     configs = edict()
     configs.distributed = False  # For testing
@@ -331,30 +321,19 @@ if __name__ == '__main__':
     # configs.dataset_dir = os.path.join('../../', 'dataset', 'kitti')
     configs.dataset_dir = r'G:\KITTI_3D_new'
     configs.results_dir = os.path.join(configs.dataset_dir, 'results')
-    lidar_aug = OneOf([
-        Random_Rotation(limit_angle=np.pi / 4, p=1.),
-        Random_Scaling(scaling_range=(0.95, 1.05), p=1.),
-    ], p=1.)
+
     lidar_aug = None
 
     out_cap = None
 
     dataset = KittiDataset(configs, mode='test', lidar_aug=lidar_aug, hflip_prob=0., num_samples=configs.num_samples)
-    # print('??')
     print('\n\nPress n to see the next sample >>> Press Esc to quit...')
     for idx in tqdm(range(len(dataset))):
-        # idx += 4266
         bev_map, labels, img_rgb, img_path, fv_map, preds = dataset.draw_img_with_label(idx)
-        # print(preds)
-        # img_rgb = cv2.add(img_rgb, fv_map)
-        # print(fv_map.shape)
         calib = Calibration(img_path.replace(".png", ".txt").replace("image_2", "calib"))
-        # print(calib)
         bev_map = (bev_map.transpose(1, 2, 0) * 255).astype(np.uint8)
         bev_map = cv2.resize(bev_map, (cnf.BEV_HEIGHT, cnf.BEV_WIDTH))
-        # print('??')
         for box_idx, (cls_id, x, y, z, h, w, l, yaw) in enumerate(labels):
-            # print('??')
             # Draw rotated box
             yaw = -yaw
             y1 = int((x - cnf.boundary['minX']) / cnf.DISCRETIZATION)
@@ -365,8 +344,6 @@ if __name__ == '__main__':
             drawRotatedBox(bev_map, x1, y1, w1, l1, yaw, cnf.colors[int(cls_id)])
 
         for pred in preds:
-            # print(pred)
-            # print('??')
             # Draw rotated box
             bev_corners = np.zeros((4, 2), dtype=np.float32)
             bev_corners[0, 0] = pred[0][0]
@@ -383,9 +360,6 @@ if __name__ == '__main__':
 
             bev_corners[:, 0] = (-bev_corners[:, 0] - cnf.boundary['minY']) / cnf.DISCRETIZATION
             bev_corners[:, 1] = (bev_corners[:, 1] - cnf.boundary['minX']) / cnf.DISCRETIZATION
-            # print(pred)
-            # print(bev_corners)
-
 
             corners_int = bev_corners.reshape(-1, 1, 2).astype(int)
             cv2.polylines(bev_map, [corners_int], True, (0,255,0), 1)
@@ -399,38 +373,33 @@ if __name__ == '__main__':
         labels[:, 1:] = lidar_to_camera_box(labels[:, 1:], calib.V2C, calib.R0, calib.P2)
         img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         img_rgb = cv2.add(img_rgb, fv_map, dtype=cv2.CV_8UC3)
-        # img_rgb = fv_map
         img_rgb = show_rgb_image_with_boxes(img_rgb, labels, calib)
         preds = preds.reshape(-1,3)
         preds[:,[0,1]] = preds[:,[1,0]]
-        # print(preds)
-        # print(preds.shape)
-        # preds[:, 2] = preds[:, 2]
         preds = transformation.lidar_to_camera_point(preds, calib.V2C, calib.R0)
         preds[:,0] = -preds[:,0]
-        # print(preds)
         preds_2d = project_to_image(preds, calib.P2).reshape(-1,8,2)
-        # print(preds_2d)
 
         for pred in preds_2d:
             img_rgb = draw_box_3d(img_rgb, pred, (0,255,0))
-        # print(preds_2d.shape)
 
         out_img = merge_rgb_to_bev(img_rgb, bev_map, output_width=configs.output_width)
-        cv2.imshow('bev_map', out_img)
+        if mode == 'step':
+            cv2.imshow('bev_map', out_img)
 
-        if cv2.waitKey(0) & 0xff == 27:
-            break
+            if cv2.waitKey(0) & 0xff == 27:
+                break
 
-    #     if out_cap is None:
-    #         out_cap_h, out_cap_w = out_img.shape[:2]
-    #         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    #         out_cap = cv2.VideoWriter(
-    #             os.path.join(configs.results_dir, '{}.avi'.format('gt')),
-    #             fourcc, 30, (out_cap_w, out_cap_h))
-    #
-    #     out_cap.write(out_img)
-    #
-    # if out_cap:
-    #     out_cap.release()
-    # cv2.destroyAllWindows()
+        if mode == 'record':
+            if out_cap is None:
+                out_cap_h, out_cap_w = out_img.shape[:2]
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                out_cap = cv2.VideoWriter(
+                    os.path.join(configs.results_dir, '{}.avi'.format('gt')),
+                    fourcc, 30, (out_cap_w, out_cap_h))
+
+            out_cap.write(out_img)
+
+    if out_cap:
+        out_cap.release()
+    cv2.destroyAllWindows()

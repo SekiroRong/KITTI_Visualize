@@ -5,10 +5,6 @@
 # @Software : PyCharm
 # @Contact : sekirorong@gmail.com
 # @github : https://github.com/SekiroRong
-import math
-import os
-import sys
-
 import cv2
 import numpy as np
 
@@ -54,31 +50,21 @@ def makeFVMap(PointCloud_, boundary):
     Height = boundary[0]
     Width = boundary[1]
 
-    # print(PointCloud_.shape)
-
     # Discretize Feature Map
     PointCloud = np.copy(PointCloud_)
     PointCloud[:, 1] = np.int_(np.floor((PointCloud_[:, 0])))
     PointCloud[:, 0] = np.int_(np.floor((PointCloud_[:, 1])))
-    PointCloud = PointCloud[PointCloud[:, 1] < 1242]
+    PointCloud = PointCloud[PointCloud[:, 1] < Width]
     PointCloud = PointCloud[PointCloud[:, 1] > -1]
-    # PointCloud[:, 0] = PointCloud[:, 0] + 100
-    PointCloud = PointCloud[PointCloud[:, 0] < 375]
+    PointCloud = PointCloud[PointCloud[:, 0] < Height]
     PointCloud = PointCloud[PointCloud[:, 0] > -1]
-    # print(PointCloud)
 
     fvMap = np.zeros((Height, Width,3))
 
-    # some important problem is image coordinate is (y,x), not (x,y)
-    # print(fvMap.shape)
-
     fvMap[np.int_(PointCloud[:, 0]), np.int_(PointCloud[:, 1])] = (255, 255, 255)
-    # print(fvMap.shape)
 
     conv_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))  # 生成5x5的全1矩阵
     fvMap = cv2.dilate(fvMap, conv_kernel)  # 膨胀
-    # cv.imshow("dilate", img_dilate)  # 显示图片
-
 
     return fvMap
 

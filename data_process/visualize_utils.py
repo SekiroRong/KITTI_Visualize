@@ -6,15 +6,10 @@
 # @Contact : sekirorong@gmail.com
 # @github : https://github.com/SekiroRong
 from __future__ import print_function
-import os
-import sys
-
 import numpy as np
 import cv2
 
-
 import kitti_config as cnf
-
 
 def roty(angle):
     # Rotation about the y-axis.
@@ -23,7 +18,6 @@ def roty(angle):
     return np.array([[c, 0, s],
                      [0, 1, 0],
                      [-s, 0, c]])
-
 
 def compute_box_3d(dim, location, ry):
     # dim: 3
@@ -41,7 +35,6 @@ def compute_box_3d(dim, location, ry):
     corners_3d = corners_3d + np.array(location, dtype=np.float32).reshape(3, 1)
     return corners_3d.transpose(1, 0)
 
-
 def project_to_image(pts_3d, P):
     # pts_3d: n x 3
     # P: 3 x 4
@@ -51,7 +44,6 @@ def project_to_image(pts_3d, P):
     pts_2d = pts_2d[:, :2] / pts_2d[:, 2:]
 
     return pts_2d.astype(np.int)
-
 
 def draw_box_3d_v2(image, qs, color=(255, 0, 255), thickness=2):
     ''' Draw 3d bounding box in image
@@ -63,7 +55,6 @@ def draw_box_3d_v2(image, qs, color=(255, 0, 255), thickness=2):
           . 5 -------- 4
           |/         |/
           6 -------- 7
-
     '''
     qs = qs.astype(np.int32)
     for k in range(0, 4):
@@ -80,7 +71,6 @@ def draw_box_3d_v2(image, qs, color=(255, 0, 255), thickness=2):
 
     return image
 
-
 def draw_box_3d(image, corners, color=(0, 0, 255)):
     ''' Draw 3d bounding box in image
         corners: (8,3) array of vertices for the 3d box in following order:
@@ -91,7 +81,6 @@ def draw_box_3d(image, corners, color=(0, 0, 255)):
           . 5 -------- 4
           |/         |/
           6 -------- 7
-
     '''
 
     face_idx = [[0, 1, 5, 4],
@@ -111,7 +100,6 @@ def draw_box_3d(image, corners, color=(0, 0, 255)):
 
     return image
 
-
 def show_rgb_image_with_boxes(img, labels, calib):
     for box_idx, label in enumerate(labels):
         cls_id, location, dim, ry = label[0], label[1:4], label[4:7], label[7]
@@ -124,7 +112,6 @@ def show_rgb_image_with_boxes(img, labels, calib):
         img = draw_box_3d(img, corners_2d, color=cnf.colors[int(cls_id)])
 
     return img
-
 
 def merge_rgb_to_bev(img_rgb, img_bev, output_width):
     img_rgb_h, img_rgb_w = img_rgb.shape[:2]
