@@ -17,7 +17,7 @@ GitHub Link:[A convenient tool to visualize KITTI dataset.](https://github.com/S
 ## Requirement
 
 ```
-pip install  requirements.txt
+pip -r install requirements.txt
 ```
 
 ## Get Start
